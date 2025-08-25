@@ -3,8 +3,63 @@ import User from '../models/User.js';
 import Inventory from '../models/Inventory.js';
 import BloodRequest from '../models/BloodRequest.js';
 import Transaction from '../models/Transaction.js';
+import mongoose from 'mongoose';
 
 const router = express.Router();
+
+// Get all organizations (public)
+router.get('/organizations', async (req, res) => {
+  try {
+    const organizations = await User.find({ 
+      role: 'organization', 
+      isApproved: true 
+    }).select('name organizationName');
+    
+    res.json(organizations);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get specific organization inventory (public)
+router.get('/organization/:orgId/inventory', async (req, res) => {
+  try {
+    const inventory = await Inventory.aggregate([
+      { 
+        $match: { 
+          organization: new mongoose.Types.ObjectId(req.params.orgId),
+          status: 'available' 
+        } 
+      },
+      {
+        $group: {
+          _id: '$bloodGroup',
+          totalUnits: { $sum: '$units' },
+          nearestExpiry: { $min: '$expiryDate' }
+        }
+      },
+      {
+        $project: {
+          bloodGroup: '$_id',
+          totalUnits: 1,
+          nearestExpiry: 1,
+          _id: 0
+        }
+      }
+    ]);
+
+    // Add blood groups with zero availability
+    const allBloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+    const result = allBloodGroups.map(group => {
+      const found = inventory.find(item => item.bloodGroup === group);
+      return found || { bloodGroup: group, totalUnits: 0, nearestExpiry: null };
+    });
+
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
 
 // Get blood availability analytics (public)
 router.get('/blood-availability', async (req, res) => {

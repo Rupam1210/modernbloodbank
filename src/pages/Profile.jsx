@@ -190,7 +190,7 @@ const Profile = () => {
       <div className="bg-white rounded-lg shadow-md p-6">
         <h2 className="text-xl font-semibold text-gray-800 mb-6">Profile Information</h2>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Basic Information */}
           <div className="space-y-4">
             <h3 className="text-lg font-medium text-gray-700 border-b pb-2">Basic Information</h3>
@@ -437,7 +437,7 @@ const Profile = () => {
             </button>
           </div>
 
-          {/* <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
             <div>
               <h3 className="text-lg font-medium text-gray-800">Two-Factor Authentication</h3>
               <p className="text-sm text-gray-600">Add an extra layer of security to your account</p>
@@ -445,7 +445,7 @@ const Profile = () => {
             <button className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition">
               Enable 2FA
             </button>
-          </div> */}
+          </div>
 
           {profile.role === 'organization' && !profile.isApproved && (
             <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">

@@ -1,16 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { TrendingUp, Users, Droplet, Activity, Calendar, Building2 } from 'lucide-react';
+import { TrendingUp, Users, Droplet, Activity, Calendar, Building2, Search } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Area, AreaChart } from 'recharts';
 
 const Analytics = () => {
   const [bloodAvailability, setBloodAvailability] = useState([]);
+  const [organizations, setOrganizations] = useState([]);
+  const [selectedOrg, setSelectedOrg] = useState('');
+  const [orgInventory, setOrgInventory] = useState([]);
   const [donationTrends, setDonationTrends] = useState([]);
   const [requestStats, setRequestStats] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchLoading, setSearchLoading] = useState(false);
 
   useEffect(() => {
     fetchAnalytics();
+    fetchOrganizations();
   }, []);
 
   const fetchAnalytics = async () => {
@@ -29,6 +34,39 @@ const Analytics = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchOrganizations = async () => {
+    try {
+      const response = await axios.get('/analytics/organizations');
+      setOrganizations(response.data);
+    } catch (error) {
+      console.error('Error fetching organizations:', error);
+    }
+  };
+
+  const fetchOrgInventory = async (orgId) => {
+    if (!orgId) {
+      setOrgInventory([]);
+      return;
+    }
+    
+    setSearchLoading(true);
+    try {
+      const response = await axios.get(`/analytics/organization/${orgId}/inventory`);
+      console.log(response)
+      setOrgInventory(response.data);
+    } catch (error) {
+      console.error('Error fetching organization inventory:', error);
+      setOrgInventory([]);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  const handleOrgSearch = (orgId) => {
+    setSelectedOrg(orgId);
+    fetchOrgInventory(orgId);
   };
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658', '#ff7300'];
@@ -135,6 +173,62 @@ const Analytics = () => {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Organization Blood Search */}
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="flex items-center space-x-3 mb-6">
+          <Search className="h-6 w-6 text-blue-600" />
+          <h2 className="text-xl font-semibold text-gray-800">Search Organization Blood Availability</h2>
+        </div>
+        
+        <div className="mb-6">
+          <select
+            value={selectedOrg}
+            onChange={(e) => handleOrgSearch(e.target.value)}
+            className="w-full md:w-1/2 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">Select an Organization</option>
+            {organizations.map((org) => (
+              <option key={org._id} value={org._id}>
+                {org.organizationName || org.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {searchLoading && (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          </div>
+        )}
+
+        {selectedOrg && !searchLoading && (
+          <div>
+            <h3 className="text-lg font-medium text-gray-700 mb-4">
+              Blood Availability - {organizations.find(org => org._id === selectedOrg)?.organizationName || organizations.find(org => org._id === selectedOrg)?.name}
+            </h3>
+            
+            {orgInventory.length > 0 ? (
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
+                {orgInventory.map((item) => (
+                  <div key={item.bloodGroup} className="bg-gray-50 p-4 rounded-lg text-center">
+                    <div className="text-xl font-bold text-red-600">{item.bloodGroup}</div>
+                    <div className="text-2xl font-bold text-gray-800">{item.totalUnits}</div>
+                    <div className="text-sm text-gray-500">Units Available</div>
+                    <div className="text-xs text-gray-400 mt-1">
+                      Expires: {item.nearestExpiry ? new Date(item.nearestExpiry).toLocaleDateString() : 'N/A'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <p>No blood inventory found for this organization.</p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Blood Availability Charts */}
@@ -325,15 +419,15 @@ const Analytics = () => {
       {/* Blood Availability Table */}
       <div className="bg-white rounded-lg shadow-md p-6">
         <h2 className="text-xl font-semibold text-gray-800 mb-4">Detailed Blood Availability</h2>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto -mx-6 px-6">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Blood Group</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Units Available</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Organizations</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Availability Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Urgency Level</th>
+                <th className="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Blood Group</th>
+                <th className="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Units</th>
+                <th className="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Organizations</th>
+                <th className="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden lg:table-cell">Status</th>
+                <th className="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Urgency</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -349,23 +443,23 @@ const Analytics = () => {
 
                 return (
                   <tr key={item.bloodGroup}>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-3 md:px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div 
                           className="w-4 h-4 rounded-full mr-3"
                           style={{ backgroundColor: bloodGroupColors[item.bloodGroup] }}
                         ></div>
-                        <span className="text-sm font-medium text-gray-900">{item.bloodGroup}</span>
+                        <span className="text-xs md:text-sm font-medium text-gray-900">{item.bloodGroup}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-3 md:px-6 py-4 whitespace-nowrap text-xs md:text-sm text-gray-900">
                       {item.totalUnits} units
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-3 md:px-6 py-4 whitespace-nowrap text-xs md:text-sm text-gray-500 hidden md:table-cell">
                       {item.organizationCount} organizations
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
+                    <td className="px-3 md:px-6 py-4 whitespace-nowrap hidden lg:table-cell">
+                      <div className="flex items-center space-x-2">
                         <div className="w-full bg-gray-200 rounded-full h-2 mr-3" style={{ width: '60px' }}>
                           <div 
                             className={`h-2 rounded-full ${item.totalUnits > 15 ? 'bg-green-500' : 
@@ -373,12 +467,12 @@ const Analytics = () => {
                             style={{ width: `${Math.min((item.totalUnits / 30) * 100, 100)}%` }}
                           ></div>
                         </div>
-                        <span className="text-sm text-gray-500">
+                        <span className="text-xs text-gray-500">
                           {item.totalUnits > 0 ? 'Available' : 'Out of Stock'}
                         </span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-3 md:px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${urgencyColor}`}>
                         {urgencyLevel}
                       </span>

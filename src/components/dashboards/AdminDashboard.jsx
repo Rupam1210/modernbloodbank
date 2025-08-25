@@ -5,17 +5,45 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState({});
-  const [users, setUsers] = useState([]);
-  const [organizations, setOrganizations] = useState([]);
-  const [bloodRequests, setBloodRequests] = useState([]);
-  const [analytics, setAnalytics] = useState({});
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('overview');
+    const [users, setUsers] = useState([]);
+    const [allUsers, setAllUsers] = useState([]);
+    const [organizations, setOrganizations] = useState([]);
+    const [bloodRequests, setBloodRequests] = useState([]);
+    const [analytics, setAnalytics] = useState({});
+    const [loading, setLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState('overview');
+    const [userFilter, setUserFilter] = useState('all');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {
     fetchDashboardData();
   }, []);
+  useEffect(() => {
+      if (activeTab === 'users') {
+        fetchAllUsers();
+      }
+    }, [activeTab, userFilter, currentPage]);
 
+    const fetchAllUsers = async () => {
+        try {
+          const params = new URLSearchParams({
+            page: currentPage,
+            limit: 10
+          });
+          
+          if (userFilter !== 'all') {
+            params.append('role', userFilter);
+          }
+    
+          const response = await axios.get(`/admin/users?${params}`);
+          setAllUsers(response.data.users);
+          setTotalPages(response.data.totalPages);
+        } catch (error) {
+          console.error('Error fetching all users:', error);
+        }
+      };
+    
   const fetchDashboardData = async () => {
     try {
       const [statsRes, usersRes, requestsRes, analyticsRes] = await Promise.all([
@@ -137,12 +165,12 @@ const AdminDashboard = () => {
       {/* Tabs */}
       <div className="bg-white rounded-lg shadow-md">
         <div className="border-b border-gray-200">
-          <nav className="flex space-x-8 px-6">
+          <nav className="flex space-x-4 px-2 overflow-x-auto scrollbar-hide md:space-x-8 md:px-6">
             {['overview', 'organizations', 'users', 'requests', 'analytics'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                className={`whitespace-nowrap py-4 px-2 border-b-2 font-medium text-sm ${
                   activeTab === tab
                     ? 'border-purple-500 text-purple-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -336,38 +364,43 @@ const AdminDashboard = () => {
           {activeTab === 'analytics' && (
             <div className="space-y-6">
               <h3 className="text-lg font-semibold text-gray-800">Detailed Analytics</h3>
-              
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-white border rounded-lg p-4">
+              {/* Responsive grid for charts: 1 col on mobile, 2 on md+ */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-white border rounded-lg p-4 overflow-x-auto">
                   <h4 className="text-md font-medium text-gray-700 mb-4">Blood Inventory by Type</h4>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={analytics.inventoryByBloodGroup}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="_id" />
-                      <YAxis />
-                      <Tooltip />
-                      <Bar dataKey="totalUnits" fill="#ef4444" />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <div className="min-w-[300px]">
+                    <ResponsiveContainer width="100%" height={250}>
+                      <BarChart data={analytics.inventoryByBloodGroup}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="_id" />
+                        <YAxis />
+                        <Tooltip />
+                        <Bar dataKey="totalUnits" fill="#ef4444" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
 
-                <div className="bg-white border rounded-lg p-4">
+                <div className="bg-white border rounded-lg p-4 overflow-x-auto">
                   <h4 className="text-md font-medium text-gray-700 mb-4">User Growth Trend</h4>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={analytics.monthlyRegistrations}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis 
-                        dataKey="_id.month"
-                        tickFormatter={(month) => `Month ${month}`}
-                      />
-                      <YAxis />
-                      <Tooltip />
-                      <Bar dataKey="count" fill="#3b82f6" />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <div className="min-w-[300px]">
+                    <ResponsiveContainer width="100%" height={250}>
+                      <BarChart data={analytics.monthlyRegistrations}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis 
+                          dataKey="_id.month"
+                          tickFormatter={(month) => `Month ${month}`}
+                        />
+                        <YAxis />
+                        <Tooltip />
+                        <Bar dataKey="count" fill="#3b82f6" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
               </div>
 
+              {/* Stats cards: 1 col on mobile, 3 on md+ */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="bg-gray-50 p-4 rounded-lg text-center">
                   <h4 className="text-lg font-semibold text-gray-800">Total Blood Camps</h4>
@@ -385,13 +418,183 @@ const AdminDashboard = () => {
             </div>
           )}
 
-          {activeTab === 'users' && (
+          {activeTab === 'users' && 
+          (
             <div>
               <h3 className="text-lg font-semibold text-gray-800 mb-6">All Users</h3>
-              <div className="text-center py-8 text-gray-500">
-                <p>User management interface - Click on specific user types in other tabs</p>
+              
+              {/* User Filter */}
+              <div className="mb-6 flex flex-wrap gap-4 items-center">
+                <select
+                  value={userFilter}
+                  onChange={(e) => {
+                    setUserFilter(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                >
+                  <option value="all">All Users</option>
+                  <option value="donor">Donors</option>
+                  <option value="hospital">Hospitals</option>
+                  <option value="organization">Organizations</option>
+                  <option value="admin">Admins</option>
+                </select>
+                
+                <div className="text-sm text-gray-600">
+                  Showing {allUsers.length} users (Page {currentPage} of {totalPages})
+                </div>
               </div>
-            </div>
+
+              {/* Users Table */}
+              <div className="overflow-x-auto -mx-6 px-6">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                      <th className="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                      <th className="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
+                      <th className="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Phone</th>
+                      <th className="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden lg:table-cell">Joined</th>
+                      <th className="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                      <th className="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {allUsers.map((user) => (
+                      <tr key={user._id}>
+                        <td className="px-3 md:px-6 py-4 whitespace-nowrap">
+                          <div>
+                            <div className="text-xs md:text-sm font-medium text-gray-900">{user.name}</div>
+                            {user.role === 'hospital' && user.hospitalName && (
+                              <div className="text-xs text-gray-500">{user.hospitalName}</div>
+                            )}
+                            {user.role === 'organization' && user.organizationName && (
+                              <div className="text-xs text-gray-500">{user.organizationName}</div>
+                            )}
+                            {user.role === 'donor' && user.bloodGroup && (
+                              <div className="text-xs text-red-600 font-medium">{user.bloodGroup}</div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-3 md:px-6 py-4 whitespace-nowrap text-xs md:text-sm text-gray-500">
+                          {user.email}
+                        </td>
+                        <td className="px-3 md:px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            user.role === 'donor' ? 'bg-red-100 text-red-800' :
+                            user.role === 'hospital' ? 'bg-blue-100 text-blue-800' :
+                            user.role === 'organization' ? 'bg-green-100 text-green-800' :
+                            'bg-purple-100 text-purple-800'
+                          }`}>
+                            {user.role}
+                          </span>
+                        </td>
+                        <td className="px-3 md:px-6 py-4 whitespace-nowrap text-xs md:text-sm text-gray-500 hidden md:table-cell">
+                          {user.phone}
+                        </td>
+                        <td className="px-3 md:px-6 py-4 whitespace-nowrap text-xs md:text-sm text-gray-500 hidden lg:table-cell">
+                          {new Date(user.createdAt).toLocaleDateString()}
+                        </td>
+                        <td className="px-3 md:px-6 py-4 whitespace-nowrap">
+                          <div className="flex flex-col space-y-1">
+                            {user.role === 'organization' && (
+                              <span className={`px-2 py-1 rounded-full text-xs ${
+                                user.isApproved ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                              }`}>
+                                {user.isApproved ? 'Approved' : 'Pending'}
+                              </span>
+                            )}
+                            {user.role === 'donor' && (
+                              <span className={`px-2 py-1 rounded-full text-xs ${
+                                user.isBloodGroupVerified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                              }`}>
+                                {user.isBloodGroupVerified ? 'Verified' : 'Unverified'}
+                              </span>
+                            )}
+                            {(user.role === 'hospital' || user.role === 'admin') && (
+                              <span className="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
+                                Active
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-3 md:px-6 py-4 whitespace-nowrap text-xs font-medium">
+                          <div className="flex flex-col space-y-1">
+                            {user.role === 'organization' && !user.isApproved && (
+                              <div className="flex space-x-1">
+                                <button
+                                  onClick={() => handleApproveOrganization(user._id, true)}
+                                  className="text-green-600 hover:text-green-900"
+                                >
+                                  Approve
+                                </button>
+                                <button
+                                  onClick={() => handleApproveOrganization(user._id, false)}
+                                  className="text-red-600 hover:text-red-900"
+                                >
+                                  Reject
+                                </button>
+                              </div>
+                            )}
+                            <button
+                              onClick={() => handleDeleteUser(user._id)}
+                              className="text-red-600 hover:text-red-900 text-left"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="mt-6 flex justify-center space-x-2">
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="px-3 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                  >
+                    Previous
+                  </button>
+                  
+                  {[...Array(totalPages)].map((_, i) => (
+                    <button
+                      key={i + 1}
+                      onClick={() => setCurrentPage(i + 1)}
+                      className={`px-3 py-2 border rounded-lg ${
+                        currentPage === i + 1
+                          ? 'bg-purple-600 text-white border-purple-600'
+                          : 'border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      {i + 1}
+                    </button>
+                  ))}
+                  
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
+              </div>
+           
+                
+
+                // testing
+            // <div>
+            //   <h3 className="text-lg font-semibold text-gray-800 mb-6">All Users</h3>
+            //   <div className="text-center py-8 text-gray-500">
+            //     <p>User management interface - Click on specific user types in other tabs</p>
+            //   </div>
+            // </div>
           )}
         </div>
       </div>

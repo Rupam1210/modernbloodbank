@@ -145,9 +145,10 @@ const OrganizationDashboard = () => {
           <Building className="h-8 w-8 text-blue-600" />
           <div>
             <h1 className="text-2xl font-bold text-gray-800">Organization Dashboard</h1>
-              <p className="text-gray-600">
-                {user.organizationName} - {(user.organizationType ? user.organizationType.replace('_', ' ').toUpperCase() : 'N/A')}
-              </p>
+            <p className="text-gray-600">
+              {user.organizationName}
+              {user.organizationType ? ` - ${user.organizationType.replace('_', ' ').toUpperCase()}` : ''}
+            </p>
           </div>
         </div>
 
@@ -199,12 +200,12 @@ const OrganizationDashboard = () => {
       {/* Tabs */}
       <div className="bg-white rounded-lg shadow-md">
         <div className="border-b border-gray-200">
-          <nav className="flex space-x-8 px-6">
+          <nav className="flex space-x-4 px-2 overflow-x-auto scrollbar-hide md:space-x-8 md:px-6">
             {['overview', 'requests', 'inventory', 'verify-donors', 'transactions'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                className={`whitespace-nowrap py-4 px-2 border-b-2 font-medium text-sm ${
                   activeTab === tab
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -373,28 +374,28 @@ const OrganizationDashboard = () => {
 
               <div>
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Current Inventory</h3>
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto -mx-6 px-6">
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Blood Group</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Units</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Expiry Date</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Donor</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                        <th className="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Blood Group</th>
+                        <th className="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Units</th>
+                        <th className="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                        <th className="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Expiry</th>
+                        <th className="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden lg:table-cell">Donor</th>
+                        <th className="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {inventory.map((item) => (
                         <tr key={item._id}>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          <td className="px-3 md:px-6 py-4 whitespace-nowrap text-xs md:text-sm font-medium text-gray-900">
                             {item.bloodGroup}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <td className="px-3 md:px-6 py-4 whitespace-nowrap text-xs md:text-sm text-gray-500">
                             {item.units}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="px-3 md:px-6 py-4 whitespace-nowrap">
                             <span className={`px-2 py-1 rounded-full text-xs ${
                               item.status === 'available' ? 'bg-green-100 text-green-800' :
                               item.status === 'expired' ? 'bg-red-100 text-red-800' :
@@ -404,28 +405,30 @@ const OrganizationDashboard = () => {
                               {item.status}
                             </span>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <td className="px-3 md:px-6 py-4 whitespace-nowrap text-xs md:text-sm text-gray-500 hidden md:table-cell">
                             {new Date(item.expiryDate).toLocaleDateString()}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <td className="px-3 md:px-6 py-4 whitespace-nowrap text-xs md:text-sm text-gray-500 hidden lg:table-cell">
                             {item.donorId?.name || 'N/A'}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                          <td className="px-3 md:px-6 py-4 whitespace-nowrap text-xs md:text-sm font-medium">
+                            <div className="flex flex-col space-y-1">
                             <button
                               onClick={() => {
                                 const newUnits = prompt('New units count:', item.units);
                                 if (newUnits) handleUpdateInventory(item._id, { units: parseInt(newUnits) });
                               }}
-                              className="text-blue-600 hover:text-blue-900"
+                              className="text-blue-600 hover:text-blue-900 text-left"
                             >
                               Edit
                             </button>
                             <button
                               onClick={() => handleDeleteInventory(item._id)}
-                              className="text-red-600 hover:text-red-900"
+                              className="text-red-600 hover:text-red-900 text-left"
                             >
                               Delete
                             </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -482,26 +485,26 @@ const OrganizationDashboard = () => {
           {activeTab === 'transactions' && (
             <div>
               <h3 className="text-lg font-semibold text-gray-800 mb-6">Transaction History</h3>
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto -mx-6 px-6">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Blood Group</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Units</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Donor</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Recipient</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Notes</th>
+                      <th className="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                      <th className="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                      <th className="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Blood</th>
+                      <th className="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Units</th>
+                      <th className="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Donor</th>
+                      <th className="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden lg:table-cell">Recipient</th>
+                      <th className="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden xl:table-cell">Notes</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {transactions.map((transaction) => (
                       <tr key={transaction._id}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <td className="px-3 md:px-6 py-4 whitespace-nowrap text-xs md:text-sm text-gray-900">
                           {new Date(transaction.date).toLocaleDateString()}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-3 md:px-6 py-4 whitespace-nowrap">
                           <span className={`px-2 py-1 rounded-full text-xs ${
                             transaction.type === 'donation' ? 'bg-green-100 text-green-800' :
                             transaction.type === 'distribution' ? 'bg-blue-100 text-blue-800' :
@@ -511,19 +514,19 @@ const OrganizationDashboard = () => {
                             {transaction.type.toUpperCase()}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        <td className="px-3 md:px-6 py-4 whitespace-nowrap text-xs md:text-sm font-medium text-gray-900">
                           {transaction.bloodGroup}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="px-3 md:px-6 py-4 whitespace-nowrap text-xs md:text-sm text-gray-500">
                           {transaction.units}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="px-3 md:px-6 py-4 whitespace-nowrap text-xs md:text-sm text-gray-500 hidden md:table-cell">
                           {transaction.donor?.name || 'N/A'}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="px-3 md:px-6 py-4 whitespace-nowrap text-xs md:text-sm text-gray-500 hidden lg:table-cell">
                           {transaction.recipient?.name || transaction.recipient?.hospitalName || 'N/A'}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="px-3 md:px-6 py-4 whitespace-nowrap text-xs md:text-sm text-gray-500 hidden xl:table-cell">
                           {transaction.notes || 'N/A'}
                         </td>
                       </tr>
