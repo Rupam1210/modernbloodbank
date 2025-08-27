@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
-import { Calendar, MapPin, Users, Clock, Plus, Edit2, Trash2, User, Phone } from 'lucide-react';
-
+import { Calendar, MapPin, Users, Clock, Plus, Edit2, Trash2, User, Phone, Eye, Mail, Droplet, Weight, Calendar as CalendarIcon } from 'lucide-react';
 const BloodCamps = () => {
   const { user } = useAuth();
   const [bloodCamps, setBloodCamps] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingCamp, setEditingCamp] = useState(null);
+  const [viewingRegistrations, setViewingRegistrations] = useState(null);
+  const [registrationDetails, setRegistrationDetails] = useState([]);
+  const [loadingRegistrations, setLoadingRegistrations] = useState(false);
   const [newCamp, setNewCamp] = useState({
     title: '',
     description: '',
@@ -35,6 +37,30 @@ const BloodCamps = () => {
       console.error('Error fetching blood camps:', error);
     } finally {
       setLoading(false);
+    }
+  };
+  const fetchRegistrationDetails = async (campId) => {
+    setLoadingRegistrations(true);
+    try {
+      const response = await axios.get(`/blood-camps/${campId}/registrations`);
+      setRegistrationDetails(response.data);
+      setViewingRegistrations(campId);
+    } catch (error) {
+      console.error('Error fetching registration details:', error);
+      alert('Error fetching registration details');
+    } finally {
+      setLoadingRegistrations(false);
+    }
+  };
+  const updateRegistrationStatus = async (campId, donorId, status) => {
+    try {
+      await axios.put(`/blood-camps/${campId}/registrations/${donorId}/status`, {
+        status
+      });
+      alert('Registration status updated successfully!');
+      fetchRegistrationDetails(campId);
+    } catch (error) {
+      alert(error.response?.data?.message || 'Error updating registration status');
     }
   };
 
@@ -105,6 +131,15 @@ const BloodCamps = () => {
       default: return 'bg-yellow-100 text-yellow-800';
     }
   };
+  const getRegistrationStatusColor = (status) => {
+    switch (status) {
+      case 'registered': return 'bg-blue-100 text-blue-800';
+      case 'attended': return 'bg-green-100 text-green-800';
+      case 'donated': return 'bg-green-100 text-green-800';
+      case 'cancelled': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
 
   const isUserRegistered = (camp) => {
     if (!user || user.role !== 'donor') return false;
@@ -118,22 +153,23 @@ const BloodCamps = () => {
       </div>
     );
   }
+  // console.log(bloodCamps,user)
 
   return (
-    <div className="space-y-6">
+   <div className="space-y-6">
       <div className="bg-white rounded-lg shadow-md p-6">
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-800">Blood Donation Camps</h1>
             <p className="text-gray-600">Join upcoming blood donation drives in your community</p>
           </div>
-          {user && user.role === 'organization' && user.isApproved && (
+          {user && user?.role === 'organization' && user.isApproved && (
             <button
               onClick={() => setShowCreateForm(true)}
               className="flex items-center space-x-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition"
             >
-              <Plus className="h-5 w-5" />
-              <span>Create Blood Camp</span>
+              <Plus className="h-10 w-10" />
+              <span>Create Camp</span>
             </button>
           )}
         </div>
@@ -358,20 +394,162 @@ const BloodCamps = () => {
           </div>
         )}
 
+        {/* Registration Details Modal */}
+        {viewingRegistrations && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-screen overflow-y-auto">
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-xl font-bold text-gray-800">Registration Details</h2>
+                  <button
+                    onClick={() => {
+                      setViewingRegistrations(null);
+                      setRegistrationDetails([]);
+                    }}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <span className="text-2xl">&times;</span>
+                  </button>
+                </div>
+
+                {loadingRegistrations ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {registrationDetails.length > 0 ? (
+                      registrationDetails.map((registration) => (
+                        <div key={registration._id} className="border border-gray-200 rounded-lg p-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <div className="space-y-2">
+                              <h4 className="font-semibold text-gray-800 flex items-center">
+                                <User className="h-4 w-4 mr-2" />
+                                {registration.donor.name}
+                              </h4>
+                              <p className="text-sm text-gray-600 flex items-center">
+                                <Mail className="h-4 w-4 mr-2" />
+                                {registration.donor.email}
+                              </p>
+                              <p className="text-sm text-gray-600 flex items-center">
+                                <Phone className="h-4 w-4 mr-2" />
+                                {registration.donor.phone}
+                              </p>
+                            </div>
+
+                            <div className="space-y-2">
+                              <p className="text-sm text-gray-600 flex items-center">
+                                <Droplet className="h-4 w-4 mr-2 text-red-600" />
+                                <span className="font-medium">Blood Group:</span>
+                                <span className="ml-1 font-bold text-red-600">{registration.donor.bloodGroup}</span>
+                                {registration.donor.isBloodGroupVerified && (
+                                  <span className="ml-2 text-green-600 text-xs">✓ Verified</span>
+                                )}
+                              </p>
+                              <p className="text-sm text-gray-600 flex items-center">
+                                <CalendarIcon className="h-4 w-4 mr-2" />
+                                <span className="font-medium">Age:</span>
+                                <span className="ml-1">{registration.donor.age} years</span>
+                              </p>
+                              <p className="text-sm text-gray-600 flex items-center">
+                                <Weight className="h-4 w-4 mr-2" />
+                                <span className="font-medium">Weight:</span>
+                                <span className="ml-1">{registration.donor.weight} kg</span>
+                              </p>
+                            </div>
+
+                            <div className="space-y-2">
+                              <p className="text-sm text-gray-600">
+                                <span className="font-medium">Registered:</span>
+                                <span className="ml-1">{new Date(registration.registrationDate).toLocaleDateString()}</span>
+                              </p>
+                              <p className="text-sm text-gray-600">
+                                <span className="font-medium">Last Donation:</span>
+                                <span className="ml-1">
+                                  {registration.donor.lastDonation 
+                                    ? new Date(registration.donor.lastDonation).toLocaleDateString()
+                                    : 'Never'
+                                  }
+                                </span>
+                              </p>
+                              <div className="flex items-center space-x-2">
+                                <span className="text-sm font-medium text-gray-700">Status:</span>
+                                <span className={`px-2 py-1 rounded-full text-xs ${getRegistrationStatusColor(registration.status)}`}>
+                                  {registration.status.charAt(0).toUpperCase() + registration.status.slice(1)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {registration.donor.medicalHistory && (
+                            <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                              <p className="text-sm text-gray-700">
+                                <span className="font-medium">Medical History:</span> {registration.donor.medicalHistory}
+                              </p>
+                            </div>
+                          )}
+
+                          <div className="mt-4 flex flex-wrap gap-2">
+                            {registration.status === 'registered' && (
+                              <>
+                                <button
+                                  onClick={() => updateRegistrationStatus(viewingRegistrations, registration.donor._id, 'attended')}
+                                  className="px-3 py-1 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition text-sm"
+                                >
+                                  Mark as Attended
+                                </button>
+                                <button
+                                  onClick={() => updateRegistrationStatus(viewingRegistrations, registration.donor._id, 'cancelled')}
+                                  className="px-3 py-1 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition text-sm"
+                                >
+                                  Cancel Registration
+                                </button>
+                              </>
+                            )}
+                            {registration.status === 'attended' && (
+                              <button
+                                onClick={() => updateRegistrationStatus(viewingRegistrations, registration.donor._id, 'donated')}
+                                className="px-3 py-1 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition text-sm"
+                              >
+                                Mark as Donated
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-8 text-gray-500">
+                        <Users className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+                        <p>No registrations found for this blood camp.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
         {/* Blood Camps Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {bloodCamps.map((camp) => (
+          {  bloodCamps.map((camp) => (
             <div key={camp._id} className="bg-white border border-gray-200 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition">
               <div className="p-6">
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-800 mb-2">{camp.title}</h3>
+                    <h3 className="text-lg font-semibold text-gray-800 mb-2">{camp.title}  </h3>
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(camp.status)}`}>
                       {camp.status.toUpperCase()}
                     </span>
                   </div>
-                  {user && user.role === 'organization' && camp.organizer._id === user.id && (
+                  {  user?._id && String(camp.organizer._id) === String(user._id) &&  (
                     <div className="flex space-x-1">
+                      <button
+                        onClick={() => fetchRegistrationDetails(camp._id)}
+                        className="p-1 text-green-600 hover:bg-green-50 rounded"
+                        title="View Registrations"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
                       <button
                         onClick={() => setEditingCamp(camp)}
                         className="p-1 text-blue-600 hover:bg-blue-50 rounded"

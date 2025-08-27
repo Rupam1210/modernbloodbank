@@ -23,9 +23,14 @@ const PORT = process.env.PORT || 5000;
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: 200, // limit each IP to 100 requests per windowMs
   message: 'Too many requests from this IP, please try again later.'
 });
+// const authLimiter = rateLimit({
+//   windowMs: 15 * 60 * 1000, // 15 minutes
+//   max: 10, // only 10 attempts per 15 min
+//   message: 'Too many login attempts, please try again later.'
+// });
 app.use(cors({
   origin:process.env.FRONTEND_URL ,
   credentials: true,
@@ -78,7 +83,7 @@ const connectDB = async () => {
 connectDB();
 
 // Routes
-app.use('/api/auth', authRoutes);
+app.use('/api/auth',authRoutes);
 app.use('/api/donor', donorRoutes);
 app.use('/api/hospital', hospitalRoutes);
 app.use('/api/organization', organizationRoutes);

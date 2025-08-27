@@ -3,6 +3,8 @@ import BloodCamp from '../models/BloodCamp.js';
 import { authenticateToken, checkRole } from '../middleware/auth.js';
 
 const router = express.Router();
+
+// Add CORS headers for all blood camp routes
 router.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
@@ -14,7 +16,6 @@ router.use((req, res, next) => {
     next();
   }
 });
-
 // Get all blood camps (public)
 router.get('/', async (req, res) => {
   try {
@@ -46,6 +47,63 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+// Get blood camp registrations with detailed donor info (organization only)
+router.get('/:id/registrations', authenticateToken, checkRole(['organization']), async (req, res) => {
+  try {
+    const camp = await BloodCamp.findOne({
+      _id: req.params.id,
+      organizer: req.user.userId
+    }).populate({
+      path: 'registrations.donor',
+      select: 'name email phone bloodGroup age weight isBloodGroupVerified lastDonation medicalHistory'
+    });
+
+    if (!camp) {
+      return res.status(404).json({ message: 'Blood camp not found or unauthorized' });
+    }
+
+    res.json(camp.registrations);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Update registration status (organization only)
+router.put('/:campId/registrations/:donorId/status', authenticateToken, checkRole(['organization']), async (req, res) => {
+  try {
+    const { status } = req.body;
+    
+    const camp = await BloodCamp.findOne({
+      _id: req.params.campId,
+      organizer: req.user.userId
+    });
+
+    if (!camp) {
+      return res.status(404).json({ message: 'Blood camp not found or unauthorized' });
+    }
+
+    const registration = camp.registrations.find(
+      reg => reg.donor.toString() === req.params.donorId
+    );
+
+    if (!registration) {
+      return res.status(404).json({ message: 'Registration not found' });
+    }
+
+    registration.status = status;
+    await camp.save();
+
+    // If marked as donated, update camp's collected units
+    if (status === 'donated') {
+      camp.collectedUnits = (camp.collectedUnits || 0) + 1;
+      await camp.save();
+    }
+
+    res.json({ message: 'Registration status updated successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
 // Create blood camp (organization only)
 router.post('/', authenticateToken, checkRole(['organization']), async (req, res) => {
   try {
