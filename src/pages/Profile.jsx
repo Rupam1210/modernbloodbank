@@ -127,33 +127,51 @@ const Profile = () => {
       {/* Profile Header */}
       <div className="bg-white rounded-lg shadow-md p-6">
         <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-4">
-            <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center">
-              {getRoleIcon(profile.role)}
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-800">{profile.name}</h1>
-              <div className="flex items-center space-x-2 mt-1">
-                <span className={`px-3 py-1 rounded-full text-sm font-medium ${getRoleBadgeColor(profile.role)}`}>
-                  {profile.role?.charAt(0).toUpperCase() + profile.role?.slice(1)}
-                </span>
-                {profile.role === 'organization' && (
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                    profile.isApproved ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {profile.isApproved ? 'Approved' : 'Pending Approval'}
-                  </span>
-                )}
-                {profile.role === 'donor' && profile.isBloodGroupVerified !== undefined && (
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                    profile.isBloodGroupVerified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    Blood Group {profile.isBloodGroupVerified ? 'Verified' : 'Unverified'}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
+          <div className="flex flex-col md:flex-row items-center md:items-start md:space-x-4 space-y-4 md:space-y-0">
+  {/* Profile Icon */}
+  <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center">
+    {getRoleIcon(profile.role)}
+  </div>
+
+  {/* Profile Info */}
+  <div className="text-center md:text-left">
+    <h1 className="text-xl md:text-2xl font-bold text-gray-800">{profile.name}</h1>
+    
+    {/* Role Badges */}
+    <div className="flex flex-wrap justify-center md:justify-start items-center gap-2 mt-2">
+      <span
+        className={`px-3 py-1 rounded-full text-sm font-medium ${getRoleBadgeColor(profile.role)}`}
+      >
+        {profile.role?.charAt(0).toUpperCase() + profile.role?.slice(1)}
+      </span>
+
+      {profile.role === 'organization' && (
+        <span
+          className={`px-3 py-1 rounded-full text-sm font-medium ${
+            profile.isApproved
+              ? 'bg-green-100 text-green-800'
+              : 'bg-yellow-100 text-yellow-800'
+          }`}
+        >
+          {profile.isApproved ? 'Approved' : 'Pending Approval'}
+        </span>
+      )}
+
+      {profile.role === 'donor' && profile.isBloodGroupVerified !== undefined && (
+        <span
+          className={`px-3 py-1 rounded-full text-sm font-medium ${
+            profile.isBloodGroupVerified
+              ? 'bg-green-100 text-green-800'
+              : 'bg-yellow-100 text-yellow-800'
+          }`}
+        >
+          Blood Group {profile.isBloodGroupVerified ? 'Verified' : 'Unverified'}
+        </span>
+      )}
+    </div>
+  </div>
+</div>
+
           <div className="flex space-x-2">
             {!editing ? (
               <button

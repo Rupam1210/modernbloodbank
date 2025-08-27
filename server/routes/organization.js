@@ -87,6 +87,45 @@ router.put('/requests/:requestId/status', authenticateToken, checkRole(['organiz
       await inventory.save();
     }
 
+    // If blood request is approved, reduce inventory
+    if (status === 'approved' && request.requestType === 'blood_request') {
+      // Find available inventory for the requested blood group
+      const inventory = await Inventory.findOne({
+        organization: req.user.userId,
+        bloodGroup: request.bloodGroup,
+        status: 'available',
+        units: { $gte: request.units }
+      });
+
+      if (!inventory) {
+        return res.status(400).json({ 
+          message: `Insufficient ${request.bloodGroup} blood units available. Cannot approve request.` 
+        });
+      }
+
+      // Reduce inventory units
+      inventory.units -= request.units;
+      
+      // If units become 0, mark as used
+      if (inventory.units === 0) {
+        inventory.status = 'used';
+      }
+      
+      await inventory.save();
+
+      // Create transaction record for blood distribution
+      const transaction = new Transaction({
+        organization: req.user.userId,
+        type: 'distribution',
+        bloodGroup: request.bloodGroup,
+        units: request.units,
+        recipient: request.requester,
+        requestId: request._id,
+        notes: `Blood distributed to ${request.hospitalName || 'hospital'} for ${request.patientName || 'patient'}`
+      });
+      
+      await transaction.save();
+    }
     res.json({ message: `Request ${status} successfully`, request });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -96,7 +135,14 @@ router.put('/requests/:requestId/status', authenticateToken, checkRole(['organiz
 // Get inventory
 router.get('/inventory', authenticateToken, checkRole(['organization']), async (req, res) => {
   try {
-    const inventory = await Inventory.find({ organization: req.user.userId })
+    const inventory = await Inventory.find({ 
+      organization: req.user.userId,
+      $or: [
+        { status: 'available' },
+        { status: 'reserved' },
+        { status: 'expired' }
+      ]
+    })
       .populate('donorId', 'name bloodGroup')
       .sort({ collectionDate: -1 });
     
@@ -110,14 +156,13 @@ router.get('/inventory', authenticateToken, checkRole(['organization']), async (
 router.post('/inventory', authenticateToken, checkRole(['organization']), async (req, res) => {
   try {
     const { bloodGroup, units, expiryDate, donorId } = req.body;
-    const safeDonorId = donorId === '' ? null : donorId;
 
     const inventory = new Inventory({
       organization: req.user.userId,
       bloodGroup,
       units,
       expiryDate,
-      donorId: safeDonorId
+      donorId
     });
 
     await inventory.save();
@@ -219,4 +264,4 @@ router.put('/donors/:donorId/verify', authenticateToken, checkRole(['organizatio
   }
 });
 
-export default router;
+export default router; 
